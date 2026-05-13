@@ -1,6 +1,6 @@
 module github.com/luxfi/mdns
 
-go 1.26
+go 1.26.3
 
 require github.com/grandcat/zeroconf v1.0.0
 
