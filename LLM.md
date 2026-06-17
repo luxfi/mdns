@@ -1,4 +1,4 @@
-# LLM.md - Hanzo Mdns
+# Hanzo Mdns
 
 ## Overview
 Go module: github.com/luxfi/mdns
