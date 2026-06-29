@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="mdns" width="880"></p>
+
 # mdns
 
 Zero-configuration peer discovery for local networks using mDNS/DNS-SD.
