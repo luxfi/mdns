@@ -28,6 +28,19 @@ const (
 	DefaultStaleTimeout = 30 * time.Second
 )
 
+// stopBound caps how long Stop waits for teardown.
+//
+// Teardown ends inside zeroconf, which multicasts to every interface with no
+// write deadline. An interface that takes no multicast -- awdl0 on a Mac, a
+// downed tunnel -- parks that write forever, and it parks holding the socket's
+// write lock, so everything queued behind it stops too. zeroconf sends its
+// goodbye before it closes the socket, so the close that would break the write
+// never runs. The browse path writes the same way and strands the same way.
+//
+// The goodbye is a courtesy; peers drop a node when its record ages out. A
+// process told to stop has to stop, so the courtesy is what gives way.
+const stopBound = time.Second
+
 // Discovery handles mDNS-based peer discovery for zero-config clustering.
 type Discovery struct {
 	// Configuration
@@ -174,15 +187,27 @@ func (d *Discovery) Start() error {
 	return nil
 }
 
-// Stop stops advertising and discovering.
+// Stop stops advertising and discovering. It returns within stopBound whether
+// or not the teardown beneath it does.
 func (d *Discovery) Stop() {
 	d.cancel()
-	if d.server != nil {
-		d.server.Shutdown()
-	}
-	d.wg.Wait()
 
-	d.logger.Info("mDNS discovery stopped", "nodeID", d.nodeID)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if d.server != nil {
+			d.server.Shutdown()
+		}
+		d.wg.Wait()
+	}()
+
+	select {
+	case <-done:
+		d.logger.Info("mDNS discovery stopped", "nodeID", d.nodeID)
+	case <-time.After(stopBound):
+		d.logger.Warn("mDNS teardown stranded in a multicast write; leaving it behind",
+			"nodeID", d.nodeID, "after", stopBound)
+	}
 }
 
 // OnPeer sets the handler for peer events.

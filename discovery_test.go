@@ -121,8 +121,30 @@ func TestDiscoveryStartStop(t *testing.T) {
 		t.Error("resolver should be set after start")
 	}
 
-	// Stop should not panic
+	start := time.Now()
 	d.Stop()
+	if elapsed := time.Since(start); elapsed > stopBound+time.Second {
+		t.Fatalf("Stop took %v, want under %v", elapsed, stopBound+time.Second)
+	}
+}
+
+// A discovery loop parked in a multicast write cannot be interrupted -- the
+// write holds the socket and zeroconf closes the socket only after the write
+// returns. Stop has to come back anyway.
+func TestStopLeavesWedgedLoop(t *testing.T) {
+	d := New("_mdnstest3._tcp", "wedged-node", 9003)
+	d.wg.Add(1) // stands in for the parked write; nothing will ever call Done
+
+	start := time.Now()
+	d.Stop()
+	elapsed := time.Since(start)
+
+	if elapsed < stopBound {
+		t.Errorf("Stop returned after %v, before the %v bound -- it did not wait for teardown at all", elapsed, stopBound)
+	}
+	if elapsed > stopBound+time.Second {
+		t.Errorf("Stop took %v, want under %v", elapsed, stopBound+time.Second)
+	}
 }
 
 func TestTwoNodeDiscovery(t *testing.T) {
