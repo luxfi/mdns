@@ -5,6 +5,7 @@ package mdns
 
 import (
 	"fmt"
+	"maps"
 	"time"
 )
 
@@ -33,9 +34,7 @@ func (p *Peer) Get(key string) string {
 // Clone returns a deep copy of the peer.
 func (p *Peer) Clone() *Peer {
 	metadata := make(map[string]string, len(p.Metadata))
-	for k, v := range p.Metadata {
-		metadata[k] = v
-	}
+	maps.Copy(metadata, p.Metadata)
 	return &Peer{
 		NodeID:   p.NodeID,
 		Addr:     p.Addr,

@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net"
 	"sync"
 	"time"
@@ -107,9 +108,7 @@ func WithStaleTimeout(timeout time.Duration) Option {
 // WithMetadata sets additional metadata to advertise.
 func WithMetadata(metadata map[string]string) Option {
 	return func(d *Discovery) {
-		for k, v := range metadata {
-			d.metadata[k] = v
-		}
+		maps.Copy(d.metadata, metadata)
 	}
 }
 
